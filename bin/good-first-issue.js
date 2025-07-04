@@ -36,6 +36,15 @@ cli
     try {
       const issues = await gfi(input, options)
 
+      // Validate type integrity before proceeding
+      if (!Array.isArray(issues)) {
+        throw new Error(
+          typeof issues === 'string' && issues.trim() !== ''
+            ? `API Error: ${issues}`
+            : 'Unexpected response format from gfi()'
+        )
+      }
+
       if (issues.length === 0) {
         process.exitCode = 0
         return console.log(chalk.yellow(`\nNo Good First Issues were found for the GitHub organization, repo, or project ${chalk.white(input)}.\n`))
