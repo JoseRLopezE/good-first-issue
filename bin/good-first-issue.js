@@ -9,6 +9,7 @@ const packageJSON = require('../package.json')
 const log = require('../lib/log')
 const prompt = require('../lib/prompt')
 const projects = require('../data/projects.json')
+const handleGfiResponse = require('../lib/handleGfiResponse')
 
 cli
   .version(packageJSON.version, '-v, --version')
@@ -35,31 +36,17 @@ cli
 
     try {
       const issues = await gfi(input, options)
+      const result = await handleGfiResponse(issues, input, projects, project, cmd, log)
 
-      // Validate type integrity before proceeding
-      if (!Array.isArray(issues)) {
-        throw new Error(
-          typeof issues === 'string' && issues.trim() !== ''
-            ? `API Error: ${issues}`
-            : 'Unexpected response format from gfi()'
-        )
+      if (result.message) {
+        process.exitCode = result.code
+        return console.log(chalk.yellow(`\n${result.message}\n`))
       }
 
-      if (issues.length === 0) {
-        process.exitCode = 0
-        return console.log(chalk.yellow(`\nNo Good First Issues were found for the GitHub organization, repo, or project ${chalk.white(input)}.\n`))
-      }
+      console.log(result.output)
 
-      const key = cmd.first ? 0 : Math.floor(Math.random() * Math.floor(issues.length - 1))
-
-      // Call the log functionality, output the result to the console.
-      const output = await log(issues[key], (input in projects) ? projects[input].name : project)
-
-      // Log the issue!
-      console.log(output.toString())
-
-      if (cmd.open) {
-        opn(issues[key].url)
+      if (cmd.open && result.url) {
+        opn(result.url)
         process.exitCode = 0
       }
     } catch (err) {
